@@ -23,11 +23,17 @@ export const buildComponents = async () => {
         html.style.backgroundPositionY = `${(window.scrollY * parallaxStrength).toPrecision()}px`;
     });
 
+    const nav = createNavigation();
+    const sectionRight = document.createElement('section');
+    
+    nav.append(sectionRight);
+    body.insertBefore(nav, body.firstChild);
+
     const { username, alias, email, type } = await (await fetch(
         `${import.meta.env.VITE_API_URL}/api/me`, { credentials: 'include' })).json();    
     const user = new Account(username, alias, email, type);
-
-    body.insertBefore(await createNavigation(user), body.firstChild);
+    
+    await renderAccountDetials(sectionRight, user);
 
     return user;
 }
@@ -150,18 +156,18 @@ const tryAdminNodes = async () => {
     return nodes;
 }
 
-const createNavigation = async (user: Account) => {
+const generateNavButtons = (items: NavItem[]) => items.map(i => createNavButton(i));
+
+const createNavigation = () => {
     const websiteTitle = document.createElement('a');
     websiteTitle.className = 'website-title'
     websiteTitle.textContent = 'District 4';
     websiteTitle.href = '../index.html';
 
     // Prepare sections
-    const generateNavButtons = (items: NavItem[]) => items.map(i => createNavButton(i));
     const sectionLeft = document.createElement('section');
     const sectionMid = document.createElement('section');
-    const sectionRight = document.createElement('section');
-    const { middle, right } = getNavSections();
+    const { middle } = getNavSections();
 
     const viewPortfolio = new URLSearchParams(window.location.search).get('showPortfolio');
     if (viewPortfolio !== 'true') { middle.pop(); } // Removes the Portfolio button
@@ -169,11 +175,16 @@ const createNavigation = async (user: Account) => {
     // Append default buttons
     sectionLeft.append(websiteTitle);
     sectionMid.append(...generateNavButtons(middle));
-    sectionRight.append(...generateNavButtons(right));
 
-    /* ================= MANUAL NODE GROUP HANDLING ================= */
+    const navigation = document.createElement('div');
+    navigation.className = 'navigation';
+    navigation.append(sectionLeft, sectionMid);
 
-    const createAccountDropdown = () => {
+    return navigation;
+}
+
+const renderAccountDetials = async (section: HTMLElement, user: Account) => {
+     const createAccountDropdown = () => {
         const username = document.createElement('span');
         username.textContent = `Welcome, ${user.alias}!`;
         username.style.textAlign = 'center';
@@ -213,6 +224,7 @@ const createNavigation = async (user: Account) => {
 
     const { name, link } = user.isEmpty() ? { name: 'Log In', link: 'login' } : { name: user.alias, link: '#' };
     const accountNodes: HTMLElement[] = [createNavButton(new NavItem(name, link))];
+
     if (!user.isEmpty()) {
         accountNodes.push(createAccountDropdown());
     }
@@ -228,12 +240,5 @@ const createNavigation = async (user: Account) => {
         if (adminContainer) { rightContainers.push(adminContainer); }
     }
 
-    sectionRight.append(...rightContainers.filter(n => !(!n)));
-
-    // Finally, create the nav bar
-    const navigation = document.createElement('div');
-    navigation.className = 'navigation';
-    navigation.append(sectionLeft, sectionMid, sectionRight);
-
-    return navigation;
+    section.append(...rightContainers.filter(n => !(!n)));
 }
