@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 // Loads pages properly
 const input = {
@@ -18,6 +19,7 @@ const input = {
 };
 
 export default defineConfig({
+    plugins: [react()],
     root: 'src',
     envDir: '..',
     build: {
