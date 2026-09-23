@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type ReactElement } from "react"
 
 type GalleryItemView = {
     id: number
@@ -8,11 +8,14 @@ type GalleryItemView = {
     date_created: string
 }
 
+const GALLERY_DIR = 'Resources/Images/Gallery/'
+
 export function GalleryApp({ onReady }: { onReady?: () => void }) {
     const [items, setItems] = useState<GalleryItemView[]>([])
     const [categories, setCategories] = useState<string[]>([])
     const [category, setCategory] = useState('None')
     const [loading, setLoading] = useState(true)
+    const [fullView, setFullView] = useState<GalleryItemView | null>(null)
 
     // Does a one-time fetch of all data needed from the database
     // By setting the effect condition to [], we assert that it only runs once
@@ -84,10 +87,16 @@ export function GalleryApp({ onReady }: { onReady?: () => void }) {
                 {loading ? null : visible.length === 0 ? <EmptyMessage/>
                 : (
                     visible.map(([name, cards]) => (
-                        <CardSection key={name} categoryName={name} cards={cards} />
+                        <CardSection 
+                            key={name}
+                            categoryName={name}
+                            cards={cards} onOpen={setFullView} 
+                        />
                     ))
                 )}
             </div>
+
+            {fullView ? <Lightbox item={fullView} onClose={setFullView}/> : null}
         </>
     )
 }
@@ -106,33 +115,37 @@ export function groupByCategory(items: GalleryItemView[]) {
     return map
 }
 
-export function GalleryCard({ item }: { item: GalleryItemView }) {
-    const GALLERY_DIR = 'Resources/Images/Gallery/'
-
+export function GalleryCard({ 
+    item, onOpen 
+}: { 
+    item: GalleryItemView, onOpen: (item: GalleryItemView) => void 
+}) {
     return (
-        <div className="gallery-card">
-            <a href={`${GALLERY_DIR}gallery_${item.id}.png`} target="_blank">
-                <img 
-                    className="card-thumbnail" 
-                    src={`${GALLERY_DIR}preview_gallery_${item.id}.png`}
-                    alt={item.title}
-                    loading="lazy"
-                    decoding="async"
-                />
-            </a>
+        <div className="gallery-card" onClick={() => onOpen(item)}>
+            <img
+                className="card-thumbnail" 
+                src={`${GALLERY_DIR}preview_gallery_${item.id}.png`}
+                alt={item.title}
+                loading="lazy"
+                decoding="async"
+            />
         </div>
     )
 }
 
-export function CardSection(
-    { categoryName, cards }: { categoryName: string, cards: GalleryItemView[] }
-) {
+export function CardSection({ 
+    categoryName, cards, onOpen 
+}: { 
+    categoryName: string, 
+    cards: GalleryItemView[], 
+    onOpen: (item: GalleryItemView) => void
+}) {
     return (
         <section className="card-section">
             <h2>{categoryName}</h2>
             <div className="image-container">
                 {cards.map(item => (
-                    <GalleryCard key={item.id} item={item} />
+                    <GalleryCard key={item.id} item={item} onOpen={() => onOpen(item)} />
                 ))}
             </div>
         </section>
@@ -153,5 +166,26 @@ export function EmptyMessage() {
             <h3>Nothing to see here!</h3>
             <p>Stay tuned for new art drops for this category.</p>
         </div>
+    )
+}
+
+export function Lightbox({
+    item, onClose 
+}: { 
+    item: GalleryItemView,
+    onClose: (item: GalleryItemView | null) => void 
+}) {
+    return (
+        <>
+            <div className="lightbox" onClick={() => onClose(null)}>
+                <button onClick={() => onClose(null)}>X</button>
+                <img src={`${GALLERY_DIR}gallery_${item.id}.png`} onClick={e => e.stopPropagation()}/>
+                <div className="details">
+                    <h1>{item.title}</h1>
+                    <p>{item.caption}</p>
+                    <small>{item.date_created}</small>
+                </div>
+            </div>
+        </>
     )
 }

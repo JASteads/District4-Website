@@ -686,6 +686,7 @@ footer small {
 }
 
 .gallery-card {
+    cursor: pointer;
     margin: 0 20px 10px 0;
 }
 
@@ -699,6 +700,56 @@ footer small {
 .gallery-container > .upload-text {
     text-decoration: underline;
     cursor: pointer;
+}
+
+.lightbox {
+    display: flex;
+    flex-direction: row;
+    background-color: rgba(0, 0, 0, 0.6);
+    position: fixed;
+    inset: 0;
+    padding: 50px;
+    align-items: center;
+    margin: auto;
+    z-index: 9001;
+}
+
+.lightbox > button {
+    cursor: pointer;
+    color: white;
+    align-self: start;
+    text-align: center;
+    background-color: transparent;
+    font-family: "Soopafresh", sans-serif;
+    font-size: 2em;
+    border: none;
+    height: 50px;
+    width: 50px;
+}
+
+.lightbox > img {
+    width: 70%;
+    margin: 0 5%;
+}
+
+.lightbox > .details {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    border-left: #0a0 solid 2px;
+    height: 100%;
+    padding: 20px 0;
+    padding-left: 50px;
+    align-self: start;
+}
+
+.lightbox > .details > h1 {
+    padding-bottom: 10px;
+    border-bottom: lightgray solid 1px;
+}
+
+.lightbox > .details > p {
+    padding: 50px 0;
 }
 
 /* ====================== GALLERY UPLOADER ====================== */
