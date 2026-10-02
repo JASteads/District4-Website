@@ -324,12 +324,13 @@ app.get('/api/blog/:id', async (req, res) => {
 // Add blog entry
 app.post('/api/blog', async (req, res) => {
     try {
-        if (!await requireUser(req, res, 'admin')) {
+        const user = await requireUser(req, res, 'admin');
+        if (!user) {
             res.status(403).json({ error: 'You must be an admin to perform this action' });
             return;
         }
 
-        const result = await basicPost('blogs', req.body.columns);
+        const result = await basicPost('blogs', { ...req.body.columns, author: user.alias });
         res.json(result.rows[0]);
     } catch (e: any) {
         res.status(e.status ?? 500).json({ error: e.message });
@@ -507,7 +508,7 @@ app.put('/api/gallery', async (req, res) => {
             return;
         }
 
-        const { id, columns }: { id: number; columns: Record<string, string> } = req.body;
+        const { id, columns }: { id: number; columns: Record<string, unknown> } = req.body;
         res.json(await basicPut('gallery_items', id, columns));
     } catch (e: any) {
         res.status(e.status ?? 500).json({ error: e.message });
@@ -581,10 +582,11 @@ const selectTable = (table: TableName, columns: Record<string, unknown>) => {
                 new Error(`Unknown column found: ${key}. Query refused`), { status: 400 }
             );
         }
-        selected[key] = value;
+
+        if (value !== undefined) selected[key] = value;
     }
 
-    // In the event that the legalRows is empty (ex. invalid TableName provided)
+    // In the event that the no legal rows are found from columns
     if (Object.keys(selected).length === 0) {
         throw Object.assign(new Error('No writable columns'), { status: 400 });
     }
@@ -592,8 +594,8 @@ const selectTable = (table: TableName, columns: Record<string, unknown>) => {
     return selected;
 }
 
-const basicPost = async (tableName: string, columns: Record<string, unknown>) => {
-    const selected = selectTable(tableName as TableName, columns);
+const basicPost = async (tableName: TableName, columns: Record<string, unknown>) => {
+    const selected = selectTable(tableName, columns);
     const keys = Object.keys(selected);
     const values = Object.values(selected);
 
@@ -612,14 +614,12 @@ const basicPost = async (tableName: string, columns: Record<string, unknown>) =>
     `, values);
 }
 
-const basicPut = async (tableName: string, id: number, columns: Record<string, unknown>) => {
-    const selected = selectTable(tableName as TableName, columns);
+const basicPut = async (tableName: TableName, id: number, columns: Record<string, unknown>) => {
+    const selected = selectTable(tableName, columns);
     const setClauses: string[] = [];
     const queryParams: any[] = [];
 
     for (const [column, value] of Object.entries(selected)) {
-        if (value === undefined) { continue; }
-
         setClauses.push(`${column} = $${queryParams.length + 1}`);
         queryParams.push(value);
     }
