@@ -240,13 +240,13 @@ app.post('/api/product', async (req, res) => {
             return;
         }
 
-        const { title, hook, description }: Record<string, string> = req.body.columns;
+        const { title, hook, description }: Record<string, unknown> = req.body.columns;
         const result = await basicPost(
             'products', { title, hook, description, release_date: new Date().toISOString() }
         );
         res.json(result.rows[0]);
     } catch (e: any) {
-        res.status(500).json({ error: e.message });
+        res.status(e.status ?? 500).json({ error: e.message });
     }
 });
 
@@ -257,12 +257,11 @@ app.put('/api/product', async (req, res) => {
             return;
         }
 
-        const { id, columns }: { id: number; columns: Record<string, string> } = req.body;
-        const { title, hook, description, release_date } = columns;
-        const result = await basicPut('products', id, { title, hook, description, release_date });
+        const { id, columns }: { id: number; columns: Record<string, unknown> } = req.body;
+        const result = await basicPut('products', id, columns);
         res.json(result.rows[0]);
     } catch (e: any) {
-        res.status(500).json({ error: e.message });
+        res.status(e.status ?? 500).json({ error: e.message });
     }
 });
 
@@ -325,45 +324,36 @@ app.get('/api/blog/:id', async (req, res) => {
 // Add blog entry
 app.post('/api/blog', async (req, res) => {
     try {
-        const { title, body } = req.body.columns;
-        const user = await requireUser(req, res, 'admin');
-
-        if (!user) {
+        if (!await requireUser(req, res, 'admin')) {
             res.status(403).json({ error: 'You must be an admin to perform this action' });
             return;
         }
 
-        const result = await basicPost('blogs', { 
-            title: title, 
-            body: body, 
-            author: user.alias 
-        });
+        const result = await basicPost('blogs', req.body.columns);
         res.json(result.rows[0]);
     } catch (e: any) {
-        res.status(500).json({ error: e.message });
+        res.status(e.status ?? 500).json({ error: e.message });
     }
 });
 
 app.put('/api/blog', async (req, res) => {
     try {
-        const user = await requireUser(req, res, 'admin');
-        if (!user) {
+        if (!await requireUser(req, res, 'admin')) {
             res.status(403).json({ error: 'You must be an admin to perform this action' });
             return;
         }
 
-        const { id, columns }: { id: number; columns: Record<string, string> } = req.body;
-        const { title, body } = columns;
-        const result = await basicPut('blogs', id, { title, body });
+        const { id, columns }: { id: number; columns: Record<string, unknown> } = req.body;
+        const result = await basicPut('blogs', id, columns);
         res.json(result.rows[0]);
     } catch (e: any) {
-        res.status(500).json({ error: e.message });
+        res.status(e.status ?? 500).json({ error: e.message });
     }
 });
 
 app.delete('/api/blog/:id', async (req, res) => {
     try {
-        if (! await requireUser(req, res, 'admin')) {
+        if (!await requireUser(req, res, 'admin')) {
             res.status(403).json({ error: 'You must be an admin to perform this action' });
             return;
         }
@@ -425,13 +415,10 @@ app.post('/api/portfolio', async (req, res) => {
             return;
         }
 
-        const { title, lang_api, date, description, project_link } = req.body.columns;
-        const result = await basicPost('portfolio_items', {
-            title, lang_api, date, description, project_link
-        });
+        const result = await basicPost('portfolio_items', req.body.columns);
         res.json(result.rows[0]);
     } catch (e: any) {
-        res.status(500).json({ error: e.message });
+        res.status(e.status ?? 500).json({ error: e.message });
     }
 });
 
@@ -442,14 +429,11 @@ app.put('/api/portfolio', async (req, res) => {
             return;
         }
 
-        const { id, columns }: { id: number; columns: Record<string, string> } = req.body;
-        const { title, lang_api, date, description, project_link } = columns;
-        const result = await basicPut('portfolio_items', id, {
-            title, lang_api, date, description, project_link
-        });
+        const { id, columns }: { id: number; columns: Record<string, unknown> } = req.body;
+        const result = await basicPut('portfolio_items', id, columns);
         res.json(result.rows[0]);
     } catch (e: any) {
-        res.status(500).json({ error: e.message });
+        res.status(e.status ?? 500).json({ error: e.message });
     }
 });
 
@@ -509,14 +493,10 @@ app.post('/api/gallery', async (req, res) => {
             return;
         }
 
-        const { title, caption, created_at, game_id } = req.body.columns;
-        const result = await basicPost('gallery_items', {
-            title, caption, created_at, game_id
-        });
-        
+        const result = await basicPost('gallery_items', req.body.columns);
         res.json(result.rows[0]);
     } catch (e: any) {
-        res.status(500).json({ error: e.message });
+        res.status(e.status ?? 500).json({ error: e.message });
     }
 });
 
@@ -528,13 +508,9 @@ app.put('/api/gallery', async (req, res) => {
         }
 
         const { id, columns }: { id: number; columns: Record<string, string> } = req.body;
-        const { title, caption, created_at, game_id } = columns;
-
-        res.json(await basicPut('gallery_items', id, {
-            title, caption, created_at, game_id
-        }));
+        res.json(await basicPut('gallery_items', id, columns));
     } catch (e: any) {
-        res.status(500).json({ error: e.message });
+        res.status(e.status ?? 500).json({ error: e.message });
     }
 });
 
@@ -567,9 +543,11 @@ const prepareTemp = () => {
     const tempName = `temp_${crypto.randomBytes(10).toString('hex')}.dat`;
     const tempPath = path.join(SRC_DIR, tempFolder);
 
-    console.log('Temp Name:', tempName)
-    console.log('Temporary Path:', tempPath);
-
+    if (debugMode) {
+        console.log('Temp Name:', tempName)
+        console.log('Temporary Path:', tempPath);
+    }
+    
     if (!fs.existsSync(tempPath)) {
         console.log('Temp folder does not exist. Creating new one...');
         fs.mkdirSync(tempPath, { recursive: true });
@@ -582,15 +560,50 @@ const prepareTemp = () => {
 
 // =========== SQL QUERIES ===========
 
-const basicPost = async (tableName: string, columns: Record<string, string>) => {
-    const keys = Object.keys(columns).filter(k => columns[k] !== undefined);
-    const values = Object.values(columns).filter(v => v !== undefined);
+// Used to determine whether a query to any of these tables is legal. 
+// All values must exist in a query of these tables
+const LEGAL_ENTRY = {
+    blogs: ['title', 'body'],
+    products: ['title', 'hook', 'description', 'release_date'],
+    gallery_items: ['title', 'caption', 'created_at', 'game_id'],
+    portfolio_items: ['title', 'lang_api', 'date', 'description', 'project_link']
+} as const;
 
-    console.log(`
-        INSERT INTO ${tableName} (${keys.join(', ')})
-        VALUES (${keys.map((_, i) => `$${i + 1}`).join(', ')})
-        RETURNING *
-    `, values);
+type TableName = keyof typeof LEGAL_ENTRY;
+
+const selectTable = (table: TableName, columns: Record<string, unknown>) => {
+    const legalRows = new Set<string>(LEGAL_ENTRY[table]); // Parses the table into easily accessible values
+    const selected: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries(columns ?? {})) {
+        if (!legalRows.has(key)) {
+            throw Object.assign(
+                new Error(`Unknown column found: ${key}. Query refused`), { status: 400 }
+            );
+        }
+        selected[key] = value;
+    }
+
+    // In the event that the legalRows is empty (ex. invalid TableName provided)
+    if (Object.keys(selected).length === 0) {
+        throw Object.assign(new Error('No writable columns'), { status: 400 });
+    }
+
+    return selected;
+}
+
+const basicPost = async (tableName: string, columns: Record<string, unknown>) => {
+    const selected = selectTable(tableName as TableName, columns);
+    const keys = Object.keys(selected);
+    const values = Object.values(selected);
+
+    if (debugMode) {
+        console.log(`
+            INSERT INTO ${tableName} (${keys.join(', ')})
+            VALUES (${keys.map((_, i) => `$${i + 1}`).join(', ')})
+            RETURNING *
+        `, values);
+    }
     
     return await pool.query(`
         INSERT INTO ${tableName} (${keys.join(', ')})
@@ -599,11 +612,12 @@ const basicPost = async (tableName: string, columns: Record<string, string>) => 
     `, values);
 }
 
-const basicPut = async (tableName: string, id: number, columns: Record<string, string>) => {
+const basicPut = async (tableName: string, id: number, columns: Record<string, unknown>) => {
+    const selected = selectTable(tableName as TableName, columns);
     const setClauses: string[] = [];
     const queryParams: any[] = [];
 
-    for (const [column, value] of Object.entries(columns)) {
+    for (const [column, value] of Object.entries(selected)) {
         if (value === undefined) { continue; }
 
         setClauses.push(`${column} = $${queryParams.length + 1}`);
@@ -611,11 +625,13 @@ const basicPut = async (tableName: string, id: number, columns: Record<string, s
     }
     queryParams.push(id);
 
-    console.log(`
-        UPDATE ${tableName} SET ${setClauses.join(', ')}
-        WHERE id = $${queryParams.length} RETURNING *
-    `);
-    console.log(queryParams);
+    if (debugMode) {
+        console.log(`
+            UPDATE ${tableName} SET ${setClauses.join(', ')}
+            WHERE id = $${queryParams.length} RETURNING *
+        `);
+        console.log(queryParams);
+    }
 
     return await pool.query(`
         UPDATE ${tableName} SET ${setClauses.join(', ')}
