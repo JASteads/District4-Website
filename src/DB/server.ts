@@ -330,7 +330,7 @@ app.post('/api/blog', async (req, res) => {
             return;
         }
 
-        const result = await basicPost('blogs', { ...req.body.columns, author: user.alias });
+        const result = await basicPost('blogs', req.body.columns, user.alias);
         res.json(result.rows[0]);
     } catch (e: any) {
         res.status(e.status ?? 500).json({ error: e.message });
@@ -509,7 +509,8 @@ app.put('/api/gallery', async (req, res) => {
         }
 
         const { id, columns }: { id: number; columns: Record<string, unknown> } = req.body;
-        res.json(await basicPut('gallery_items', id, columns));
+        const result = await basicPut('gallery_items', id, columns);
+        res.json(result.rows[0]);
     } catch (e: any) {
         res.status(e.status ?? 500).json({ error: e.message });
     }
@@ -582,7 +583,6 @@ const selectTable = (table: TableName, columns: Record<string, unknown>) => {
                 new Error(`Unknown column found: ${key}. Query refused`), { status: 400 }
             );
         }
-
         if (value !== undefined) selected[key] = value;
     }
 
@@ -594,8 +594,12 @@ const selectTable = (table: TableName, columns: Record<string, unknown>) => {
     return selected;
 }
 
-const basicPost = async (tableName: TableName, columns: Record<string, unknown>) => {
-    const selected = selectTable(tableName, columns);
+const basicPost = async (
+    tableName: TableName, 
+    columns: Record<string, unknown>, 
+    serverColumns: Record<string, unknown> = {}
+) => {
+    const selected = { ...selectTable(tableName, columns), serverColumns };
     const keys = Object.keys(selected);
     const values = Object.values(selected);
 
