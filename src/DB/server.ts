@@ -330,7 +330,7 @@ app.post('/api/blog', async (req, res) => {
             return;
         }
 
-        const result = await basicPost('blogs', req.body.columns, user.alias);
+        const result = await basicPost('blogs', req.body.columns, { author: user.alias });
         res.json(result.rows[0]);
     } catch (e: any) {
         res.status(e.status ?? 500).json({ error: e.message });
@@ -599,7 +599,7 @@ const basicPost = async (
     columns: Record<string, unknown>, 
     serverColumns: Record<string, unknown> = {}
 ) => {
-    const selected = { ...selectTable(tableName, columns), serverColumns };
+    const selected = { ...selectTable(tableName, columns), ...serverColumns };
     const keys = Object.keys(selected);
     const values = Object.values(selected);
 
