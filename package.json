@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "start": "node src/DB/server.ts"
+    "start": "node src/DB/server.ts",
+    "test": "node --experimental-strip-types --test src/DB/**/*.test.ts"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
