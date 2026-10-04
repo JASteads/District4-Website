@@ -13,6 +13,7 @@ import { fileURLToPath } from 'url';
 // Source code imports
 import { selectTable, type TableName } from './columns.ts';
 import { requireAdmin } from './auth.ts';
+import { imageTarget } from './imageTarget.ts';
 
 // Reference values
 const __filename = fileURLToPath(import.meta.url);
@@ -163,43 +164,42 @@ app.post('/api/image', async (req, res) => {
         return;
     }
 
-    const { type, isThumbnail } = req.query;
-    const folder = type as string;
+    // VALIDATE UPLOAD ARGUMENTS
 
-    // Validate that the 'type' value is not exploitative
-    if (!/^[A-Za-z0-9_-]+$/.test(folder)) {
-        res.status(400).json({ error: 'Invalid type provided '});
+    const { type, isThumbnail } = req.query;
+
+    const folder = typeof type === 'string' ? type : '';
+    const header = req.headers['x-file-name'];
+    const target = imageTarget(folder, typeof header === 'string' ? header : '');
+    if (!target.ok) {
+        res.status(target.status).json({ error: target.error });
         return;
     }
 
-    const { tempPath, tempName, stream } = prepareTemp();
+    const dest = path.join(SRC_DIR, 'Resources/Images/', target.folder);
+    const finalPath = path.join(dest, target.filename);
 
-    req.pipe(stream);
-
-    // Setup by making sure characters are legal for download
-    const realName = path.basename(decodeURIComponent(req.headers['x-file-name'] as string));
-    const realPath = path.join(SRC_DIR, `Resources/Images/${folder}`);
-    const finalPath = path.join(realPath, realName);
-    
     if (debugMode) {
-        console.log('Real Name:', realName);
-        console.log('Real Path:', realPath);
+        console.log('File Name:', target.filename);
+        console.log('Destination:', dest);
         console.log('Final path:', finalPath);
     }
 
-    if (!fs.existsSync(realPath)) {
-        fs.mkdirSync(realPath, { recursive: true });
-    }
+    // PREPARE FOR UPLOAD
 
+    if (!fs.existsSync(dest)) { fs.mkdirSync(dest, { recursive: true }) }
+
+    const { tempPath, tempName, stream } = prepareTemp();
+    req.pipe(stream);
     stream.on('finish', async () => {
         try {
             // Move the temp file into its permanent location
             await fs.promises.rename(path.join(tempPath, tempName), finalPath);
             
-            const thumb = !(!isThumbnail) && isThumbnail;
+            const thumb = isThumbnail === 'true';
             const response = {
                 message: `${( thumb ? 'Thumbnail' : 'Image')} downloaded to gallery`,
-                savedAs: thumb ? `preview_${realName}` : realName
+                savedAs: thumb ? `preview_${target.filename}` : target.filename
             };
 
             res.status(200).json(response);
@@ -208,7 +208,6 @@ app.post('/api/image', async (req, res) => {
             res.status(500).json(e);
         }
     });
-    
     stream.on('error', () => {
         console.error('Something went wrong with the download..');
         res.status(500).json('Image download failed');
