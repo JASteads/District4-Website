@@ -24,6 +24,8 @@
 
 **Admin CMS** — Given this is not a social media platform, administrative privileges are used for handling website content. A user must be signed into an administrator account in order to access these exclusive features.
 
+**Unit Testing** — Queries that modify tables are tested before being processed. Queries must be qualified using a strict set of data entries that enforce compliance with the intended structure of the database.
+
 ## Content Creation Tools
 <img width="2560" height="1305" alt="image" src="https://github.com/user-attachments/assets/9f92deb2-cb4a-4861-9bc9-4661f5284d40" />
 
