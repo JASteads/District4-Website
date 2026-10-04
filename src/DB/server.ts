@@ -142,7 +142,7 @@ app.get('/api/get_admin_nav', async (req, res) => {
     try {
         const user = requireAdmin(await requireUser(req, res));
         if (!user.ok) {
-            res.status(user.status).json({ error: user.error });
+            res.status(user.status).send('');
             return;
         }
         const panelButtonStr = '<a id="admin-panel-button">Admin Panel</a>';
@@ -150,7 +150,7 @@ app.get('/api/get_admin_nav', async (req, res) => {
 
         return res.send(`${panelButtonStr} ${portalButtonStr}`);
     } catch (e: any) {
-        res.status(500).json({ error: e.message });
+        res.status(500).send('');
     }
 });
 
@@ -181,9 +181,11 @@ app.post('/api/image', async (req, res) => {
     const realPath = path.join(SRC_DIR, `Resources/Images/${folder}`);
     const finalPath = path.join(realPath, realName);
     
-    console.log('Real Name:', realName);
-    console.log('Real Path:', realPath);
-    console.log('Final path:', finalPath);
+    if (debugMode) {
+        console.log('Real Name:', realName);
+        console.log('Real Path:', realPath);
+        console.log('Final path:', finalPath);
+    }
 
     if (!fs.existsSync(realPath)) {
         fs.mkdirSync(realPath, { recursive: true });
