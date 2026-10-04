@@ -24,7 +24,7 @@ describe('selectTable', () => {
 
     it('refuses a body that picks down to nothing', () => {
         assert.throws(
-            () => selectTable('blogs', { title: undefined, author: undefined }),
+            () => selectTable('blogs', { title: undefined, body: undefined }),
             (err: any) => err.status === 400
         )
     });
