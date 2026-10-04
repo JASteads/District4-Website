@@ -13,14 +13,14 @@ describe('imageTarget', () => {
     it('refuses an invalid type value', () => {
         const target = imageTarget('../secret', 'Cat.png');
         assert.deepEqual(target, { 
-            ok: false as const, status: 400, error: 'Invalid type provided'
+            ok: false, status: 400, error: 'Invalid type provided'
         });
     });
 
     it('refuses non-image file extensions', () => {
         const target = imageTarget('gallery', 'Cat.mp4');
         assert.deepEqual(target, { 
-            ok: false as const, status: 415, error: 'File must by JPG, PNG, WEBP, or GIF'
+            ok: false, status: 415, error: 'File must be JPG, PNG, WEBP, or GIF'
         });
     });
 
@@ -29,5 +29,12 @@ describe('imageTarget', () => {
         assert.deepEqual(target, {
             ok: true, folder: 'gallery', filename: 'Cat.PNG'
         });
+    });
+
+    it('it handles image files in nested folders', () => {
+       const target = imageTarget('gallery', '../../Cat.png');
+        assert.deepEqual(target, {
+            ok: true, folder: 'gallery', filename: 'Cat.png'
+        }); 
     });
 });
