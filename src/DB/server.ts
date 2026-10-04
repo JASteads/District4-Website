@@ -9,7 +9,9 @@ import argon2 from 'argon2';
 import { Pool } from 'pg';
 import type { CookieOptions, Response as ExpressResponse } from 'express';
 import { fileURLToPath } from 'url';
-import { selectTable, type TableName } from './columns';
+
+// Source code imports
+import { selectTable, type TableName } from './columns.ts';
 import { requireAdmin } from './auth.ts';
 
 // Reference values
@@ -128,37 +130,36 @@ app.delete('/api/login', async (req, res) => {
     }
 });
 
-app.get('/api/admin_access', async (req, res) => 
-    res.send(await requireUser(req, res, 'admin') !== null)
-);
-
 // =========== INJECTIONS ===========
 
 app.post('/api/admin_panel', async (req, res) => {
-    const user = await requireUser(req, res, 'admin');
-
-    safeRedirect(res, user ? 'admin_panel.html' : 'load_fail.html');
+    const user = await requireUser(req, res);
+    safeRedirect(res, requireAdmin(user).ok ? 'admin_panel.html' : 'load_fail.html');
 });
 
 // TODO : Make this an addon for a general get_nav route that uses user info
 app.get('/api/get_admin_nav', async (req, res) => {
-    let html: string | null = null;
-
-    if (await requireUser(req, res, 'admin')) {
+    try {
+        const user = requireAdmin(await requireUser(req, res));
+        if (!user.ok) {
+            res.status(user.status).json({ error: user.error });
+            return;
+        }
         const panelButtonStr = '<a id="admin-panel-button">Admin Panel</a>';
         const portalButtonStr = '<a id="admin-portal-button">Upload Portal</a>';
-        
-        html = `${panelButtonStr} ${portalButtonStr}`;   
-    }
 
-    return res.send(html);
+        return res.send(`${panelButtonStr} ${portalButtonStr}`);
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // =========== IMAGE UPLOADING ===========
 
 app.post('/api/image', async (req, res) => {
-    if (!await requireUser(req, res, 'admin')) {
-        res.status(403).json({ error: 'You must be an admin to perform this action' });
+    const user = requireAdmin(await requireUser(req, res));
+    if (!user.ok) {
+        res.status(user.status).json({ error: user.error });
         return;
     }
 
@@ -237,8 +238,9 @@ app.get('/api/product/:id', async (req, res) => {
 
 app.post('/api/product', async (req, res) => {
     try {
-        if (!await requireUser(req, res, 'admin')) {
-            res.status(403).json({ error: 'You must be an admin to perform this action' });
+        const user = requireAdmin(await requireUser(req, res));
+        if (!user.ok) {
+            res.status(user.status).json({ error: user.error });
             return;
         }
 
@@ -254,8 +256,9 @@ app.post('/api/product', async (req, res) => {
 
 app.put('/api/product', async (req, res) => {
     try {
-        if (!await requireUser(req, res, 'admin')) {
-            res.status(403).json({ error: 'You must be an admin to perform this action' });
+        const user = requireAdmin(await requireUser(req, res));
+        if (!user.ok) {
+            res.status(user.status).json({ error: user.error });
             return;
         }
 
@@ -269,8 +272,9 @@ app.put('/api/product', async (req, res) => {
 
 app.delete('/api/product/:id', async (req, res) => {
     try {
-        if (!await requireUser(req, res, 'admin')) {
-            res.status(403).json({ error: 'You must be an admin to perform this action' });
+        const user = requireAdmin(await requireUser(req, res));
+        if (!user.ok) {
+            res.status(user.status).json({ error: user.error });
             return;
         }
 
@@ -326,13 +330,16 @@ app.get('/api/blog/:id', async (req, res) => {
 // Add blog entry
 app.post('/api/blog', async (req, res) => {
     try {
-        const user = await requireUser(req, res, 'admin');
-        if (!user) {
-            res.status(403).json({ error: 'You must be an admin to perform this action' });
+        const session = await requireUser(req, res);
+        const user = requireAdmin(session);
+        if (!user.ok) {
+            res.status(user.status).json({ error: user.error });
             return;
         }
 
-        const result = await basicPost('blogs', req.body.columns, { author: user.alias });
+        const result = await basicPost('blogs', req.body.columns, { 
+            author: session?.alias || 'Unknown' 
+        });
         res.json(result.rows[0]);
     } catch (e: any) {
         res.status(e.status ?? 500).json({ error: e.message });
@@ -341,8 +348,9 @@ app.post('/api/blog', async (req, res) => {
 
 app.put('/api/blog', async (req, res) => {
     try {
-        if (!await requireUser(req, res, 'admin')) {
-            res.status(403).json({ error: 'You must be an admin to perform this action' });
+        const user = requireAdmin(await requireUser(req, res));
+        if (!user.ok) {
+            res.status(user.status).json({ error: user.error });
             return;
         }
 
@@ -356,8 +364,9 @@ app.put('/api/blog', async (req, res) => {
 
 app.delete('/api/blog/:id', async (req, res) => {
     try {
-        if (!await requireUser(req, res, 'admin')) {
-            res.status(403).json({ error: 'You must be an admin to perform this action' });
+        const user = requireAdmin(await requireUser(req, res));
+        if (!user.ok) {
+            res.status(user.status).json({ error: user.error });
             return;
         }
 
@@ -413,8 +422,9 @@ app.get('/api/portfolio', async (_, res) => {
 
 app.post('/api/portfolio', async (req, res) => {
     try {
-        if (!await requireUser(req, res, 'admin')) {
-            res.status(403).json({ error: 'You must be an admin to perform this action' });
+        const user = requireAdmin(await requireUser(req, res));
+        if (!user.ok) {
+            res.status(user.status).json({ error: user.error });
             return;
         }
 
@@ -427,11 +437,11 @@ app.post('/api/portfolio', async (req, res) => {
 
 app.put('/api/portfolio', async (req, res) => {
     try {
-        if (!await requireUser(req, res, 'admin')) {
-            res.status(403).json({ error: 'You must be an admin to perform this action' });
+        const user = requireAdmin(await requireUser(req, res));
+        if (!user.ok) {
+            res.status(user.status).json({ error: user.error });
             return;
         }
-
         const { id, columns }: { id: number; columns: Record<string, unknown> } = req.body;
         const result = await basicPut('portfolio_items', id, columns);
         res.json(result.rows[0]);
@@ -442,8 +452,9 @@ app.put('/api/portfolio', async (req, res) => {
 
 app.delete('/api/portfolio/:id', async (req, res) => {
     try {
-        if (!await requireUser(req, res, 'admin')) {
-            res.status(403).json({ error: 'You must be an admin to perform this action' });
+        const user = requireAdmin(await requireUser(req, res));
+        if (!user.ok) {
+            res.status(user.status).json({ error: user.error });
             return;
         }
 
@@ -491,7 +502,7 @@ app.get('/api/gallery', async (req, res) => {
 
 app.post('/api/gallery', async (req, res) => {
     try {
-        const user = requireAdmin(await requireUser(req, res, 'admin'));
+        const user = requireAdmin(await requireUser(req, res));
         if (!user.ok) {
             res.status(user.status).json({ error: user.error });
             return;
@@ -506,8 +517,9 @@ app.post('/api/gallery', async (req, res) => {
 
 app.put('/api/gallery', async (req, res) => {
     try {
-        if (!await requireUser(req, res, 'admin')) {
-            res.status(403).json({ error: 'You must be an admin to perform this action' });
+        const user = requireAdmin(await requireUser(req, res));
+        if (!user.ok) {
+            res.status(user.status).json({ error: user.error });
             return;
         }
 
@@ -521,7 +533,7 @@ app.put('/api/gallery', async (req, res) => {
 
 app.delete('/api/gallery/:id', async (req, res) => {
     try {
-        const user = requireAdmin(await requireUser(req, res, 'admin'));
+        const user = requireAdmin(await requireUser(req, res));
         if (!user.ok) {
             res.status(user.status).json({ error: user.error });
             return;
@@ -565,8 +577,6 @@ const prepareTemp = () => {
 }
 
 // =========== SQL QUERIES ===========
-
-
 
 const basicPost = async (
     tableName: TableName, 
@@ -684,13 +694,13 @@ const renewSession = async (id: string, remember: boolean) => {
     );
 }
 
-const requireUser = async (req: express.Request, res: ExpressResponse, accountType?: string) => {
+const requireUser = async (req: express.Request, res: ExpressResponse) => {
     const id = getSessionID(req);
     
     if (!id) { return null; }
 
     const users = await pool.query(`
-        SELECT u.username, u.alias, u.type AS type, u.email, s.remember
+        SELECT u.username, u.alias, u.type, u.email, s.remember
         FROM sessions s
         INNER JOIN users u
            ON u.username = s.username
@@ -705,9 +715,6 @@ const requireUser = async (req: express.Request, res: ExpressResponse, accountTy
     }
     const user = users.rows[0]; // Get the target user from DB
 
-    // Authorize user if necessary
-    if (accountType && !(user.type === accountType || user.type === 'admin')) { return null; }
-    
     await renewSession(id, user.remember); // Authorized -- refresh session
     res.cookie(SESSION_COOKIE, id, getCookieProperties(daysToMS(user.remember)));
 

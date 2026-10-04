@@ -10,13 +10,15 @@ describe('requireAdmin', () => {
     });
 
     it('refuses a non-admin user', () => {
-        const user = requireAdmin({ type: 'standard' });
-        assert.deepEqual(user.ok, false);
-        assert.deepEqual(user.status, 403);
+        const result = requireAdmin({ type: 'standard' });
+        assert.deepEqual(result.ok, false);
+        assert.deepEqual(result.status, 403);
     });
 
     it('accepts an admin', () => {
-        const user = requireAdmin({ type: 'admin' });
-        assert.deepEqual(user.ok, true);
+        const user = { type: 'admin' };
+        const result = requireAdmin(user);
+        assert.deepEqual(result.ok, true);
+        assert.deepEqual(result.user, user);
     });
 });
