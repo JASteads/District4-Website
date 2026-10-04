@@ -10,6 +10,7 @@ import { Pool } from 'pg';
 import type { CookieOptions, Response as ExpressResponse } from 'express';
 import { fileURLToPath } from 'url';
 import { selectTable, type TableName } from './columns';
+import { requireAdmin } from './auth.ts';
 
 // Reference values
 const __filename = fileURLToPath(import.meta.url);
@@ -490,8 +491,9 @@ app.get('/api/gallery', async (req, res) => {
 
 app.post('/api/gallery', async (req, res) => {
     try {
-        if (!await requireUser(req, res, 'admin')) {
-            res.status(403).json({ error: 'You must be an admin to perform this action' });
+        const user = requireAdmin(await requireUser(req, res, 'admin'));
+        if (!user.ok) {
+            res.status(user.status).json({ error: user.error });
             return;
         }
 
@@ -519,8 +521,9 @@ app.put('/api/gallery', async (req, res) => {
 
 app.delete('/api/gallery/:id', async (req, res) => {
     try {
-        if (!await requireUser(req, res, 'admin')) {
-            res.status(403).json({ error: 'You must be an admin to perform this action' });
+        const user = requireAdmin(await requireUser(req, res, 'admin'));
+        if (!user.ok) {
+            res.status(user.status).json({ error: user.error });
             return;
         }
 

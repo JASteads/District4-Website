@@ -14,7 +14,7 @@ describe('selectTable', () => {
             () => selectTable('blogs', { title: 'Test', author: 'Lemon' }),
             (err: any) => err.status === 400 && /author/.test(err.message)
         );
-    })
+    });
 
     it('drops undefined but keeps null', () => {
         const selected = selectTable('blogs', { title: 'Test', body: undefined });
